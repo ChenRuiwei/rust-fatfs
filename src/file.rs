@@ -51,6 +51,10 @@ impl<IO: ReadWriteSeek, TP: Clone, OCC: Clone> File<IO, TP, OCC> {
         }
     }
 
+    pub fn offset(&self) -> u32 {
+        self.offset
+    }
+
     /// Truncate file in current position.
     ///
     /// # Errors
