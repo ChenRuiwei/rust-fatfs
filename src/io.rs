@@ -178,12 +178,13 @@ impl From<std::io::SeekFrom> for SeekFrom {
 /// `Read`, `Write`, `Seek` traits from this crate are implemented for this type if
 /// corresponding types from `std::io` are implemented by the inner instance.
 #[cfg(feature = "std")]
-pub struct StdIoWrapper<T> {
+#[derive(Clone)]
+pub struct StdIoWrapper<T: Clone> {
     inner: T,
 }
 
 #[cfg(feature = "std")]
-impl<T> StdIoWrapper<T> {
+impl<T: Clone> StdIoWrapper<T> {
     /// Creates a new `StdIoWrapper` instance that wraps the provided `inner` instance.
     pub fn new(inner: T) -> Self {
         Self { inner }
@@ -196,12 +197,12 @@ impl<T> StdIoWrapper<T> {
 }
 
 #[cfg(feature = "std")]
-impl<T> IoBase for StdIoWrapper<T> {
+impl<T: Clone> IoBase for StdIoWrapper<T> {
     type Error = std::io::Error;
 }
 
 #[cfg(feature = "std")]
-impl<T: std::io::Read> Read for StdIoWrapper<T> {
+impl<T: std::io::Read + Clone> Read for StdIoWrapper<T> {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize, Self::Error> {
         self.inner.read(buf)
     }
@@ -211,7 +212,7 @@ impl<T: std::io::Read> Read for StdIoWrapper<T> {
 }
 
 #[cfg(feature = "std")]
-impl<T: std::io::Write> Write for StdIoWrapper<T> {
+impl<T: std::io::Write + Clone> Write for StdIoWrapper<T> {
     fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
         self.inner.write(buf)
     }
@@ -226,14 +227,14 @@ impl<T: std::io::Write> Write for StdIoWrapper<T> {
 }
 
 #[cfg(feature = "std")]
-impl<T: std::io::Seek> Seek for StdIoWrapper<T> {
+impl<T: std::io::Seek + Clone> Seek for StdIoWrapper<T> {
     fn seek(&mut self, pos: SeekFrom) -> Result<u64, Self::Error> {
         self.inner.seek(pos.into())
     }
 }
 
 #[cfg(feature = "std")]
-impl<T> From<T> for StdIoWrapper<T> {
+impl<T: Clone> From<T> for StdIoWrapper<T> {
     fn from(from: T) -> Self {
         Self::new(from)
     }
