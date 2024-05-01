@@ -3,6 +3,7 @@ use std::io;
 use std::io::prelude::*;
 use std::mem;
 use std::str;
+use std::sync::Arc;
 
 use fatfs::{DefaultTimeProvider, FsOptions, LossyOemCpConverter, StdIoWrapper};
 use fscommon::BufStream;
@@ -27,14 +28,14 @@ fn call_with_tmp_img<F: Fn(&str)>(f: F, filename: &str, test_seq: u32) {
     fs::remove_file(tmp_path).unwrap();
 }
 
-fn open_filesystem_rw(tmp_path: &str) -> FileSystem {
+fn open_filesystem_rw(tmp_path: &str) -> Arc<FileSystem> {
     let file = fs::OpenOptions::new().read(true).write(true).open(tmp_path).unwrap();
     let buf_file = BufStream::new(file);
     let options = FsOptions::new().update_accessed_date(true);
-    FileSystem::new(buf_file, options).unwrap()
+    Arc::new(FileSystem::new(buf_file, options).unwrap())
 }
 
-fn call_with_fs<F: Fn(FileSystem)>(f: F, filename: &str, test_seq: u32) {
+fn call_with_fs<F: Fn(Arc<FileSystem>)>(f: F, filename: &str, test_seq: u32) {
     let callback = |tmp_path: &str| {
         let fs = open_filesystem_rw(tmp_path);
         f(fs);
@@ -42,7 +43,7 @@ fn call_with_fs<F: Fn(FileSystem)>(f: F, filename: &str, test_seq: u32) {
     call_with_tmp_img(callback, filename, test_seq);
 }
 
-fn test_write_short_file(fs: FileSystem) {
+fn test_write_short_file(fs: Arc<FileSystem>) {
     let root_dir = fs.root_dir();
     let mut file = root_dir.open_file("short.txt").expect("open file");
     file.truncate().unwrap();
@@ -68,7 +69,7 @@ fn test_write_file_fat32() {
     call_with_fs(test_write_short_file, FAT32_IMG, 1)
 }
 
-fn test_write_long_file(fs: FileSystem) {
+fn test_write_long_file(fs: Arc<FileSystem>) {
     let root_dir = fs.root_dir();
     let mut file = root_dir.open_file("long.txt").expect("open file");
     file.truncate().unwrap();
@@ -101,7 +102,7 @@ fn test_write_long_file_fat32() {
     call_with_fs(test_write_long_file, FAT32_IMG, 2)
 }
 
-fn test_remove(fs: FileSystem) {
+fn test_remove(fs: Arc<FileSystem>) {
     let root_dir = fs.root_dir();
     assert!(root_dir.remove("very/long/path").is_err());
     let dir = root_dir.open_dir("very/long/path").unwrap();
@@ -134,7 +135,7 @@ fn test_remove_fat32() {
     call_with_fs(test_remove, FAT32_IMG, 3)
 }
 
-fn test_create_file(fs: FileSystem) {
+fn test_create_file(fs: Arc<FileSystem>) {
     let root_dir = fs.root_dir();
     let dir = root_dir.open_dir("very/long/path").unwrap();
     let mut names = dir.iter().map(|r| r.unwrap().file_name()).collect::<Vec<String>>();
@@ -201,7 +202,7 @@ fn test_create_file_fat32() {
     call_with_fs(test_create_file, FAT32_IMG, 4)
 }
 
-fn test_create_dir(fs: FileSystem) {
+fn test_create_dir(fs: Arc<FileSystem>) {
     let root_dir = fs.root_dir();
     let parent_dir = root_dir.open_dir("very/long/path").unwrap();
     let mut names = parent_dir
@@ -273,7 +274,7 @@ fn test_create_dir_fat32() {
     call_with_fs(test_create_dir, FAT32_IMG, 5)
 }
 
-fn test_rename_file(fs: FileSystem) {
+fn test_rename_file(fs: Arc<FileSystem>) {
     let root_dir = fs.root_dir();
     let parent_dir = root_dir.open_dir("very/long/path").unwrap();
     let entries = parent_dir.iter().map(|r| r.unwrap()).collect::<Vec<_>>();
@@ -372,7 +373,7 @@ fn test_dirty_flag_fat32() {
     call_with_tmp_img(test_dirty_flag, FAT32_IMG, 7)
 }
 
-fn test_multiple_files_in_directory(fs: FileSystem) {
+fn test_multiple_files_in_directory(fs: Arc<FileSystem>) {
     let dir = fs.root_dir().create_dir("/TMP").unwrap();
     for i in 0..8 {
         let name = format!("T{}.TXT", i);

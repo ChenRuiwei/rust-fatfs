@@ -1,5 +1,6 @@
 use std::fs::OpenOptions;
 use std::io::{self, prelude::*};
+use std::sync::Arc;
 
 use fatfs::{FileSystem, FsOptions};
 use fscommon::BufStream;
@@ -14,7 +15,7 @@ fn main() -> io::Result<()> {
     };
     let buf_stream = BufStream::new(img_file);
     let options = FsOptions::new().update_accessed_date(true);
-    let fs = FileSystem::new(buf_stream, options)?;
+    let fs = Arc::new(FileSystem::new(buf_stream, options)?);
     let mut file = fs.root_dir().create_file("hello.txt")?;
     file.write_all(b"Hello World!")?;
     Ok(())

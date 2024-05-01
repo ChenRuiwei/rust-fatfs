@@ -14,6 +14,7 @@
 //!
 //! ```rust
 //! use std::io::prelude::*;
+//! use std::sync::Arc;
 //!
 //! fn main() -> std::io::Result<()> {
 //!     # std::fs::copy("resources/fat16.img", "tmp/fat.img")?;
@@ -21,7 +22,7 @@
 //!     let img_file = std::fs::OpenOptions::new().read(true).write(true)
 //!         .open("tmp/fat.img")?;
 //!     let buf_stream = fscommon::BufStream::new(img_file);
-//!     let fs = fatfs::FileSystem::new(buf_stream, fatfs::FsOptions::new())?;
+//!     let fs = Arc::new(fatfs::FileSystem::new(buf_stream, fatfs::FsOptions::new())?);
 //!     let root_dir = fs.root_dir();
 //!
 //!     // Write a file

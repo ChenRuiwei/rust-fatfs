@@ -1,5 +1,5 @@
-use std::io;
 use std::io::prelude::*;
+use std::{io, sync::Arc};
 
 use fatfs::{DefaultTimeProvider, LossyOemCpConverter, StdIoWrapper};
 use fscommon::BufStream;
@@ -11,7 +11,7 @@ const TEST_STR: &str = "Hi there Rust programmer!\n";
 type FileSystem =
     fatfs::FileSystem<StdIoWrapper<BufStream<io::Cursor<Vec<u8>>>>, DefaultTimeProvider, LossyOemCpConverter>;
 
-fn basic_fs_test(fs: &FileSystem) {
+fn basic_fs_test(fs: &Arc<FileSystem>) {
     let stats = fs.stats().expect("stats");
     if fs.fat_type() == fatfs::FatType::Fat32 {
         // On FAT32 one cluster is allocated for root directory
@@ -60,7 +60,7 @@ fn basic_fs_test(fs: &FileSystem) {
     assert_eq!(filenames, ["subdir1", "new-name.txt"]);
 }
 
-fn test_format_fs(opts: fatfs::FormatVolumeOptions, total_bytes: u64) -> FileSystem {
+fn test_format_fs(opts: fatfs::FormatVolumeOptions, total_bytes: u64) -> Arc<FileSystem> {
     let _ = env_logger::builder().is_test(true).try_init();
     // Init storage to 0xD1 bytes (value has been choosen to be parsed as normal file)
     let storage_vec: Vec<u8> = vec![0xD1_u8; total_bytes as usize];
@@ -68,7 +68,7 @@ fn test_format_fs(opts: fatfs::FormatVolumeOptions, total_bytes: u64) -> FileSys
     let mut buffered_stream = fatfs::StdIoWrapper::from(BufStream::new(storage_cur));
     fatfs::format_volume(&mut buffered_stream, opts).expect("format volume");
 
-    let fs = fatfs::FileSystem::new(buffered_stream, fatfs::FsOptions::new()).expect("open fs");
+    let fs = Arc::new(fatfs::FileSystem::new(buffered_stream, fatfs::FsOptions::new()).expect("open fs"));
     basic_fs_test(&fs);
     fs
 }
